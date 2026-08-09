@@ -84,6 +84,9 @@ function setupLoginForm() {
 
         if (btnLogin) btnLogin.innerHTML = `<span>Se connecter au Dashboard</span> <i class="fa-solid fa-arrow-right"></i>`;
 
+        // Réinitialiser le formulaire pour laisser les champs vierges
+        loginForm.reset();
+
         // Accès accordé au dashboard uniquement si l'authentification est valide
         loginWrapper.classList.add("hidden");
         dashboardLayout.classList.remove("hidden");
@@ -314,6 +317,8 @@ function setupNavigation() {
                 }
             }
             if (logoutModal) logoutModal.classList.add("hidden");
+            const loginForm = document.getElementById("login-form");
+            if (loginForm) loginForm.reset();
             document.getElementById("dashboard-container").classList.add("hidden");
             document.getElementById("login-container").classList.remove("hidden");
         });

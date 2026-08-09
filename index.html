@@ -30,16 +30,16 @@
 
 
             
-            <form id="login-form">
+            <form id="login-form" autocomplete="off">
                 <div class="form-group">
                     <label for="admin-email"><i class="fa-regular fa-envelope"></i> Adresse Email</label>
-                    <input type="email" id="admin-email" placeholder="admin@tonti.ga" required value="admin@tonti.ga">
+                    <input type="email" id="admin-email" required>
                 </div>
 
                 <div class="form-group">
                     <label for="admin-password"><i class="fa-solid fa-lock"></i> Mot de passe</label>
                     <div class="password-input">
-                        <input type="password" id="admin-password" placeholder="••••••••" required value="admin123456">
+                        <input type="password" id="admin-password" required>
                         <i class="fa-regular fa-eye toggle-password" id="toggle-pwd"></i>
                     </div>
                 </div>
@@ -50,10 +50,6 @@
                     <span>Se connecter au Dashboard</span>
                     <i class="fa-solid fa-arrow-right"></i>
                 </button>
-
-                <div class="demo-badge">
-                    <i class="fa-solid fa-shield-halved"></i> Connexion sécurisée avec Supabase Auth
-                </div>
             </form>
         </div>
     </div>
