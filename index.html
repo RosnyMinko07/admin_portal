@@ -358,7 +358,27 @@
         </div>
     </div>
 
+    <!-- MODAL DE CONFIRMATION DE DÉCONNEXION -->
+    <div id="logout-confirm-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-triangle-exclamation" style="color: #EAB308;"></i> Confirmation de Déconnexion</h3>
+                <button class="close-modal" id="close-logout-modal-btn">&times;</button>
+            </div>
+            
+            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+                Êtes-vous sûr de vouloir vous déconnecter du Portail d'Administration TONTI ?
+            </p>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancel-logout-modal-btn">Annuler</button>
+                <button type="button" class="btn-primary-sm" id="confirm-logout-btn" style="background: #DC2626;">Se Déconnecter</button>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
+
 

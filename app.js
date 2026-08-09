@@ -41,19 +41,22 @@ function initApp() {
     renderTables();
 }
 
-// 1. GESTION DU FORMULAIRE DE CONNEXION
+// 1. GESTION DU FORMULAIRE DE CONNEXION (AUTHENTIFICATION STRICTE)
 function setupLoginForm() {
     const loginForm = document.getElementById("login-form");
     const loginWrapper = document.getElementById("login-container");
     const dashboardLayout = document.getElementById("dashboard-container");
     const errorBanner = document.getElementById("login-error");
+    const btnLogin = document.getElementById("btn-login");
 
     loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const email = document.getElementById("admin-email").value;
+        const email = document.getElementById("admin-email").value.trim();
         const password = document.getElementById("admin-password").value;
 
-        // Essayer la connexion via Supabase
+        if (errorBanner) errorBanner.style.display = "none";
+        if (btnLogin) btnLogin.innerHTML = `<span>Vérification...</span> <div class="spinner"></div>`;
+
         if (supabaseClient) {
             try {
                 const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -62,20 +65,32 @@ function setupLoginForm() {
                 });
 
                 if (error) {
-                    console.log("Supabase auth note:", error.message);
-                    // Mode démo accepté pour le test direct
+                    if (errorBanner) {
+                        errorBanner.innerText = "Email ou mot de passe incorrect. Veuillez réessayer.";
+                        errorBanner.style.display = "block";
+                    }
+                    if (btnLogin) btnLogin.innerHTML = `<span>Se connecter au Dashboard</span> <i class="fa-solid fa-arrow-right"></i>`;
+                    return; // Bloquer l'accès au dashboard !
                 }
             } catch (err) {
-                console.log("Auth catch:", err);
+                if (errorBanner) {
+                    errorBanner.innerText = "Erreur de connexion serveur: " + err.message;
+                    errorBanner.style.display = "block";
+                }
+                if (btnLogin) btnLogin.innerHTML = `<span>Se connecter au Dashboard</span> <i class="fa-solid fa-arrow-right"></i>`;
+                return;
             }
         }
 
-        // Accès accordé au dashboard
+        if (btnLogin) btnLogin.innerHTML = `<span>Se connecter au Dashboard</span> <i class="fa-solid fa-arrow-right"></i>`;
+
+        // Accès accordé au dashboard uniquement si l'authentification est valide
         loginWrapper.classList.add("hidden");
         dashboardLayout.classList.remove("hidden");
         fetchLiveSupabaseData();
     });
 }
+
 
 // 2. RECUPERATION DES DONNEES REELLES DEPUIS SUPABASE (PRODUCTION)
 async function fetchLiveSupabaseData() {
@@ -276,11 +291,35 @@ function setupNavigation() {
 
     if (logoutBtn) {
         logoutBtn.addEventListener("click", () => {
+            const logoutModal = document.getElementById("logout-confirm-modal");
+            if (logoutModal) logoutModal.classList.remove("hidden");
+        });
+    }
+
+    const closeLogoutBtn = document.getElementById("close-logout-modal-btn");
+    const cancelLogoutBtn = document.getElementById("cancel-logout-modal-btn");
+    const confirmLogoutBtn = document.getElementById("confirm-logout-btn");
+    const logoutModal = document.getElementById("logout-confirm-modal");
+
+    if (closeLogoutBtn) closeLogoutBtn.addEventListener("click", () => logoutModal.classList.add("hidden"));
+    if (cancelLogoutBtn) cancelLogoutBtn.addEventListener("click", () => logoutModal.classList.add("hidden"));
+
+    if (confirmLogoutBtn) {
+        confirmLogoutBtn.addEventListener("click", async () => {
+            if (supabaseClient) {
+                try {
+                    await supabaseClient.auth.signOut();
+                } catch (e) {
+                    console.log("Signout error:", e);
+                }
+            }
+            if (logoutModal) logoutModal.classList.add("hidden");
             document.getElementById("dashboard-container").classList.add("hidden");
             document.getElementById("login-container").classList.remove("hidden");
         });
     }
 }
+
 
 // 5. GESTION DES MODALES (ABONNEMENT ET AJOUT ADMIN)
 function setupModal() {
