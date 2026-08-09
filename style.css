@@ -3,28 +3,29 @@
    ============================================================ */
 
 :root {
-    --primary: rgba(27, 94, 32, 0.88);        /* Vert Forêt Gabon Translucide */
-    --primary-light: rgba(46, 125, 50, 0.90);
-    --primary-glass: rgba(27, 94, 32, 0.12);
-    --primary-border: rgba(46, 125, 50, 0.25);
+    --primary: #0F5A47;                  /* Émeraude pin très doux et sobre */
+    --primary-light: #15803D;
+    --primary-glass: rgba(15, 90, 71, 0.10);
+    --primary-border: rgba(15, 90, 71, 0.20);
     
-    --accent: #FF6F00;          /* Orange Airtel */
-    --accent-blue: #1565C0;     /* Bleu Moov */
+    --accent: #D97706;                  /* Or chaud / Ambre doux */
+    --accent-blue: #2563EB;             /* Bleu royal doux */
     
-    --bg-dark: rgba(15, 23, 42, 0.95);
-    --bg-card: rgba(255, 255, 255, 0.85);
-    --bg-body: #F4F7F4;
+    --bg-dark: #0F172A;
+    --bg-card: rgba(255, 255, 255, 0.90);
+    --bg-body: #F8FAFC;                 /* Fond clair ardoise apaisant */
     
-    --text-primary: #1E293B;
-    --text-secondary: #64748B;
+    --text-primary: #0F172A;            /* Noir ardoise très lisible */
+    --text-secondary: #475569;          /* Gris ardoise doux */
     --text-muted: #94A3B8;
     
-    --border-color: rgba(226, 232, 240, 0.8);
+    --border-color: rgba(226, 232, 240, 0.9);
     --sidebar-width: 260px;
     --radius: 16px;
-    --shadow: 0 10px 25px -5px rgba(27, 94, 32, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
-    --shadow-lg: 0 20px 30px -5px rgba(0, 0, 0, 0.15);
+    --shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+    --shadow-lg: 0 20px 30px -5px rgba(15, 23, 42, 0.15);
 }
+
 
 * {
     margin: 0;
@@ -108,8 +109,9 @@ h1, h2, h3, h4, .brand h1 {
 }
 
 .brand h1 span {
-    color: var(--primary);
+    color: var(--accent);
 }
+
 
 .brand p {
     color: var(--text-secondary);
