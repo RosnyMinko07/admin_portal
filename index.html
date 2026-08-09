@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TONTI — Espace Administration SaaS</title>
+    <!-- Polices Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- 1. ÉCRAN DE CONNEXION ADMIN -->
+    <div id="login-container" class="login-wrapper">
+        <div class="login-card">
+            <div class="brand">
+                <div class="logo-icon"><i class="fa-solid fa-vault"></i></div>
+                <h1>TONTI <span>Admin</span></h1>
+                <p>Portail d'Administration & Gestion SaaS</p>
+            </div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="admin-email"><i class="fa-regular fa-envelope"></i> Adresse Email</label>
+                    <input type="email" id="admin-email" placeholder="admin@tonti.ga" required value="admin@tonti.ga">
+                </div>
+
+                <div class="form-group">
+                    <label for="admin-password"><i class="fa-solid fa-lock"></i> Mot de passe</label>
+                    <div class="password-input">
+                        <input type="password" id="admin-password" placeholder="••••••••" required value="admin123456">
+                        <i class="fa-regular fa-eye toggle-password" id="toggle-pwd"></i>
+                    </div>
+                </div>
+
+                <div class="error-banner" id="login-error"></div>
+
+                <button type="submit" class="btn-primary" id="btn-login">
+                    <span>Se connecter au Dashboard</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+
+                <div class="demo-badge">
+                    <i class="fa-solid fa-shield-halved"></i> Connexion sécurisée avec Supabase Auth
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. DASHBOARD APPRÉCIABLE & RESPONSIVE -->
+    <div id="dashboard-container" class="dashboard-layout hidden">
+        
+        <!-- BARRE DE NAVIGATION LATÉRALE (SIDEBAR) -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon"><i class="fa-solid fa-vault"></i></div>
+                <h2>TONTI <span>SaaS</span></h2>
+            </div>
+
+            <nav class="sidebar-menu">
+                <a href="#overview" class="menu-item active" data-tab="overview">
+                    <i class="fa-solid fa-chart-pie"></i> Vue d'ensemble
+                </a>
+                <a href="#subscriptions" class="menu-item" data-tab="subscriptions">
+                    <i class="fa-solid fa-crown"></i> Abonnements SaaS
+                </a>
+                <a href="#tontines" class="menu-item" data-tab="tontines">
+                    <i class="fa-solid fa-users-rectangle"></i> Tontines Actives
+                </a>
+                <a href="#users" class="menu-item" data-tab="users">
+                    <i class="fa-solid fa-user-gear"></i> Utilisateurs
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="admin-profile">
+                    <div class="avatar"><i class="fa-solid fa-user-shield"></i></div>
+                    <div class="info">
+                        <span class="name" id="admin-name-display">Super Admin</span>
+                        <span class="role">Administrateur</span>
+                    </div>
+                </div>
+                <button class="btn-logout" id="btn-logout" title="Déconnexion">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- CONTENU PRINCIPAL -->
+        <main class="main-content">
+            
+            <!-- HEADER SUPÉRIEUR -->
+            <header class="top-header">
+                <button class="toggle-sidebar" id="toggle-sidebar-btn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <div class="header-title">
+                    <h1 id="page-title">Vue d'ensemble</h1>
+                    <span class="subtitle">Tableau de bord de pilotage TONTI Gabon</span>
+                </div>
+
+                <div class="header-actions">
+                </div>
+
+            </header>
+
+            <div class="content-body">
+                
+                <!-- TAB 1 : VUE D'ENSEMBLE (OVERVIEW) -->
+                <section id="tab-overview" class="tab-content active">
+                    
+                    <!-- CARTES DE MÉTRIQUES -->
+                    <div class="metrics-grid">
+                        <div class="metric-card gold">
+                            <div class="icon"><i class="fa-solid fa-coins"></i></div>
+                            <div class="metric-details">
+                                <span class="label">Revenus SaaS (Ce mois)</span>
+                                <h3 id="stat-revenue">375 000 FCFA</h3>
+                                <span class="trend positive"><i class="fa-solid fa-arrow-trend-up"></i> +18% vs mois dernier</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card green">
+                            <div class="icon"><i class="fa-solid fa-user-tie"></i></div>
+                            <div class="metric-details">
+                                <span class="label">Présidents Actifs</span>
+                                <h3 id="stat-presidents">85</h3>
+                                <span class="subtext">Forfaits Mboolo, Solidaire & Tycoon</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card blue">
+                            <div class="icon"><i class="fa-solid fa-users"></i></div>
+                            <div class="metric-details">
+                                <span class="label">Total Membres Inscrits</span>
+                                <h3 id="stat-members">1 420</h3>
+                                <span class="subtext">Utilisateurs enregistrés</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card purple">
+                            <div class="icon"><i class="fa-solid fa-vault"></i></div>
+                            <div class="metric-details">
+                                <span class="label">Volume Tontines Organisées</span>
+                                <h3 id="stat-volume">42 500 000 FCFA</h3>
+                                <span class="subtext">Argent en circulation (Hors App)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DERNIERS ABONNEMENTS & ACTIVITÉS -->
+                    <div class="dashboard-grid">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h3><i class="fa-solid fa-clock-rotate-left"></i> Derniers Abonnements SaaS</h3>
+                                <a href="#subscriptions" class="link-tab" data-tab="subscriptions">Voir tout</a>
+                            </div>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Président</th>
+                                            <th>Téléphone</th>
+                                            <th>Forfait</th>
+                                            <th>Montant</th>
+                                            <th>Statut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="latest-subs-body">
+                                        <!-- Rempli en JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- TAB 2 : GESTION DES ABONNEMENTS SAAS -->
+                <section id="tab-subscriptions" class="tab-content">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3>Gestion des Abonnements Présidents</h3>
+                                <p class="panel-sub">Validez ou prolongez les forfaits SaaS (Mboolo, Solidaire, Tycoon)</p>
+                            </div>
+                            <button class="btn-primary-sm" id="btn-open-activate-modal">
+                                <i class="fa-solid fa-plus"></i> Activer un Forfait
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Président</th>
+                                        <th>Téléphone</th>
+                                        <th>Forfait Actuel</th>
+                                        <th>Date d'expiration</th>
+                                        <th>Statut</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subscriptions-table-body">
+                                    <!-- Rempli en JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 3 : TONTINES ACTIVES -->
+                <section id="tab-tontines" class="tab-content">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3>Tontines en cours d'organisation</h3>
+                            <p class="panel-sub">Vue d'ensemble des tontines créées par les présidents</p>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nom de la Tontine</th>
+                                        <th>Président</th>
+                                        <th>Cotisation / Membre</th>
+                                        <th>Membres</th>
+                                        <th>Cagnotte Mensuelle</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tontines-table-body">
+                                    <!-- Rempli en JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 4 : UTILISATEURS -->
+                <section id="tab-users" class="tab-content">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3>Tous les Utilisateurs & Administrateurs</h3>
+                                <p class="panel-sub">Liste globale des Présidents, Membres et Administrateurs</p>
+                            </div>
+                            <button class="btn-primary-sm" id="btn-open-admin-modal">
+                                <i class="fa-solid fa-user-plus"></i> Ajouter un Admin
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nom</th>
+                                        <th>Téléphone</th>
+                                        <th>Rôle</th>
+                                        <th>Date d'inscription</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body">
+                                    <!-- Rempli en JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL D'ACTIVATION MANUELLE D'ABONNEMENT -->
+    <div id="activate-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-crown"></i> Valider / Activer un Abonnement</h3>
+                <button class="close-modal" id="close-modal-btn">&times;</button>
+            </div>
+            
+            <form id="activate-sub-form">
+                <div class="form-group">
+                    <label for="sub-phone">Numéro de téléphone du Président</label>
+                    <input type="text" id="sub-phone" placeholder="+241077123456" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="sub-tier">Choisir le Forfait SaaS</label>
+                    <select id="sub-tier" required>
+                        <option value="mboolo">Mboolo (2 500 FCFA / mois — 1 Tontine max)</option>
+                        <option value="solidaire" selected>Solidaire (5 000 FCFA / mois — 2 Tontines max)</option>
+                        <option value="tycoon">Tycoon (10 000 FCFA / mois — Illimité)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="sub-method">Moyen de paiement reçu</label>
+                    <select id="sub-method">
+                        <option value="airtel_money">Airtel Money (USSD / Dépôt direct)</option>
+                        <option value="moov_money">Moov Money</option>
+                        <option value="especes">Espèces / Validation Manuel Admin</option>
+                    </select>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancel-modal-btn">Annuler</button>
+                    <button type="submit" class="btn-primary-sm">Activer pour 30 jours</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL D'AJOUT D'UN ADMINISTRATEUR -->
+    <div id="add-admin-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-shield"></i> Ajouter un Administrateur</h3>
+                <button class="close-modal" id="close-admin-modal-btn">&times;</button>
+            </div>
+            
+            <form id="add-admin-form">
+                <div class="form-group">
+                    <label for="admin-new-name">Nom complet de l'Admin</label>
+                    <input type="text" id="admin-new-name" placeholder="Ex: M. Marc Owono" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="admin-new-email">Adresse Email Admin</label>
+                    <input type="email" id="admin-new-email" placeholder="admin2@tonti.ga" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="admin-new-phone">Numéro de téléphone</label>
+                    <input type="text" id="admin-new-phone" placeholder="+24107000000" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="admin-new-pwd">Mot de passe temporaire</label>
+                    <input type="password" id="admin-new-pwd" placeholder="••••••••" required>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancel-admin-modal-btn">Annuler</button>
+                    <button type="submit" class="btn-primary-sm">Créer l'Administrateur</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
