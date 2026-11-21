@@ -29,6 +29,15 @@ let demoUsers = [
     { name: "Marcelle Mendome", phone: "+241066445566", role: "membre", joined: "18 Jan 2026", status: "Actif" }
 ];
 
+// Échappe le texte avant de l'insérer en HTML : noms de tontines, noms et
+// numéros sont saisis par les utilisateurs et ne doivent jamais être
+// interprétés comme du code dans la session d'un administrateur.
+function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     initApp();
 });
@@ -37,67 +46,209 @@ function initApp() {
     setupLoginForm();
     setupNavigation();
     setupModal();
-    setupPasswordToggle();
     renderTables();
 }
 
-// 1. GESTION DU FORMULAIRE DE CONNEXION (AUTHENTIFICATION STRICTE)
-function setupLoginForm() {
-    const loginForm = document.getElementById("login-form");
-    const loginWrapper = document.getElementById("login-container");
-    const dashboardLayout = document.getElementById("dashboard-container");
-    const errorBanner = document.getElementById("login-error");
-    const btnLogin = document.getElementById("btn-login");
+// 1. CONNEXION DES ADMINISTRATEURS : COMPTE GOOGLE UNIQUEMENT
+// Le portail ne décide rien seul : c'est la base (fonction est_admin) qui
+// confirme qu'il s'agit d'une session Google d'un profil administrateur.
+const LIBELLE_BOUTON = `<i class="fa-brands fa-google"></i> <span>Se connecter avec Google</span>`;
 
-    loginForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const email = document.getElementById("admin-email").value.trim();
-        const password = document.getElementById("admin-password").value;
+function afficherErreurConnexion(message) {
+    const banner = document.getElementById("login-error");
+    if (banner) {
+        banner.innerText = message;
+        banner.style.display = "block";
+    }
+    const btn = document.getElementById("btn-login");
+    if (btn) btn.innerHTML = LIBELLE_BOUTON;
+}
 
-        if (errorBanner) errorBanner.style.display = "none";
-        if (btnLogin) btnLogin.innerHTML = `<span>Vérification...</span> <div class="spinner"></div>`;
+function afficherDashboard() {
+    document.getElementById("login-container").classList.add("hidden");
+    document.getElementById("dashboard-container").classList.remove("hidden");
+    fetchLiveSupabaseData();
+}
 
-        if (supabaseClient) {
-            try {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
+// Au retour de Google (ou au rechargement), vérifie la session ouverte.
+async function verifierSessionAdmin() {
+    // Échec côté Google/Supabase : l'erreur revient dans l'adresse de la page.
+    const params = new URLSearchParams(
+        window.location.hash.slice(1) || window.location.search.slice(1)
+    );
+    const erreurRetour = params.get("error_description") || params.get("error");
+    if (erreurRetour) {
+        history.replaceState(null, "", window.location.pathname);
+        let message = erreurRetour;
+        try { message = decodeURIComponent(erreurRetour); } catch (_) { /* déjà lisible */ }
+        afficherErreurConnexion("Connexion Google refusée : " + message);
+        return;
+    }
 
-                if (error) {
-                    if (errorBanner) {
-                        errorBanner.innerText = "Email ou mot de passe incorrect. Veuillez réessayer.";
-                        errorBanner.style.display = "block";
-                    }
-                    if (btnLogin) btnLogin.innerHTML = `<span>Se connecter au Dashboard</span> <i class="fa-solid fa-arrow-right"></i>`;
-                    return; // Bloquer l'accès au dashboard !
-                }
-            } catch (err) {
-                if (errorBanner) {
-                    errorBanner.innerText = "Erreur de connexion serveur: " + err.message;
-                    errorBanner.style.display = "block";
-                }
-                if (btnLogin) btnLogin.innerHTML = `<span>Se connecter au Dashboard</span> <i class="fa-solid fa-arrow-right"></i>`;
-                return;
+    const { data } = await supabaseClient.auth.getSession();
+    if (!data.session) return;
+
+    // Étape 1 : session Google d'un profil administrateur ?
+    const { data: estAdminGoogle, error } = await supabaseClient.rpc('est_admin_google');
+    if (error || estAdminGoogle !== true) {
+        await supabaseClient.auth.signOut();
+        afficherErreurConnexion(
+            "Ce compte Google n'a pas les droits administrateur TONTI."
+        );
+        return;
+    }
+
+    // Étape 2 : code de l'application d'authentification (niveau aal2).
+    const { data: niveau } = await supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (niveau && niveau.currentLevel === 'aal2') {
+        await ouvrirDashboardSiAdmin();
+    } else {
+        await demarrerEtapeCode();
+    }
+}
+
+// Ouvre le dashboard seulement si la base confirme les droits complets.
+async function ouvrirDashboardSiAdmin() {
+    const { data: estAdmin, error } = await supabaseClient.rpc('est_admin');
+    if (error || estAdmin !== true) {
+        await supabaseClient.auth.signOut();
+        masquerEtapeCode();
+        afficherErreurConnexion("Droits administrateur non confirmés. Reconnectez-vous.");
+        return;
+    }
+    masquerEtapeCode();
+    afficherDashboard();
+}
+
+// --- 2e étape : code à 6 chiffres (Google Authenticator, etc.) ---
+let facteurMfa = null;
+
+function afficherErreurCode(message) {
+    const banner = document.getElementById("mfa-error");
+    banner.innerText = message;
+    banner.style.display = message ? "block" : "none";
+}
+
+function masquerEtapeCode() {
+    document.getElementById("mfa-step").classList.add("hidden");
+    document.getElementById("login-form").classList.remove("hidden");
+}
+
+async function demarrerEtapeCode() {
+    document.getElementById("login-form").classList.add("hidden");
+    document.getElementById("mfa-step").classList.remove("hidden");
+    afficherErreurCode("");
+
+    const { data: facteurs, error } = await supabaseClient.auth.mfa.listFactors();
+    if (error) {
+        afficherErreurCode("Impossible de lire vos facteurs de sécurité : " + error.message);
+        return;
+    }
+
+    const verifie = (facteurs.totp || []).find(f => f.status === 'verified');
+    if (verifie) {
+        // Connexion habituelle : on demande le code.
+        facteurMfa = verifie.id;
+        document.getElementById("mfa-intro").innerText =
+            "Saisissez le code à 6 chiffres affiché dans votre application d'authentification.";
+        document.getElementById("mfa-enrolement").classList.add("hidden");
+    } else {
+        // Première connexion : on retire un éventuel enrôlement inachevé,
+        // puis on affiche le QR code à scanner.
+        for (const f of (facteurs.all || [])) {
+            if (f.factor_type === 'totp' && f.status !== 'verified') {
+                await supabaseClient.auth.mfa.unenroll({ factorId: f.id });
             }
         }
+        const { data: enrol, error: errEnrol } = await supabaseClient.auth.mfa.enroll({
+            factorType: 'totp',
+            friendlyName: 'TONTI Admin'
+        });
+        if (errEnrol) {
+            afficherErreurCode("Activation de la double authentification impossible : " + errEnrol.message);
+            return;
+        }
+        facteurMfa = enrol.id;
+        document.getElementById("mfa-intro").innerText =
+            "Première connexion : scannez ce QR code avec Google Authenticator " +
+            "(ou une application similaire), puis saisissez le code affiché.";
+        document.getElementById("mfa-qr").src = enrol.totp.qr_code;
+        document.getElementById("mfa-cle").innerText = enrol.totp.secret;
+        document.getElementById("mfa-enrolement").classList.remove("hidden");
+    }
+    document.getElementById("mfa-code").value = "";
+    document.getElementById("mfa-code").focus();
+}
 
-        if (btnLogin) btnLogin.innerHTML = `<span>Se connecter au Dashboard</span> <i class="fa-solid fa-arrow-right"></i>`;
-
-        // Réinitialiser le formulaire pour laisser les champs vierges
-        loginForm.reset();
-
-        // Accès accordé au dashboard uniquement si l'authentification est valide
-        loginWrapper.classList.add("hidden");
-        dashboardLayout.classList.remove("hidden");
-        fetchLiveSupabaseData();
+async function validerCode() {
+    const code = document.getElementById("mfa-code").value.trim();
+    if (!/^\d{6}$/.test(code)) {
+        afficherErreurCode("Saisissez les 6 chiffres du code.");
+        return;
+    }
+    const btn = document.getElementById("btn-mfa");
+    btn.disabled = true;
+    const { error } = await supabaseClient.auth.mfa.challengeAndVerify({
+        factorId: facteurMfa,
+        code
     });
+    btn.disabled = false;
+    if (error) {
+        afficherErreurCode("Code incorrect ou expiré. Réessayez avec le code affiché.");
+        document.getElementById("mfa-code").value = "";
+        return;
+    }
+    await ouvrirDashboardSiAdmin();
+}
+
+function setupLoginForm() {
+    const btnLogin = document.getElementById("btn-login");
+
+    if (!supabaseClient) {
+        afficherErreurConnexion("Service d'authentification indisponible. Réessayez plus tard.");
+        if (btnLogin) btnLogin.disabled = true;
+        return;
+    }
+
+    btnLogin.addEventListener("click", async () => {
+        const banner = document.getElementById("login-error");
+        if (banner) banner.style.display = "none";
+        btnLogin.innerHTML = `<span>Redirection vers Google...</span> <div class="spinner"></div>`;
+
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+            provider: 'google',
+            // Retour sur cette page après la connexion Google.
+            options: { redirectTo: window.location.origin + window.location.pathname }
+        });
+        if (error) {
+            afficherErreurConnexion("Connexion Google impossible : " + error.message);
+        }
+    });
+
+    document.getElementById("btn-mfa").addEventListener("click", validerCode);
+    document.getElementById("mfa-code").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") validerCode();
+    });
+    document.getElementById("btn-mfa-annuler").addEventListener("click", async () => {
+        await supabaseClient.auth.signOut();
+        masquerEtapeCode();
+    });
+
+    verifierSessionAdmin().catch(() =>
+        afficherErreurConnexion("Erreur de connexion au serveur. Réessayez.")
+    );
 }
 
 
 // 2. RECUPERATION DES DONNEES REELLES DEPUIS SUPABASE (PRODUCTION)
 async function fetchLiveSupabaseData() {
     if (!supabaseClient) return;
+
+    // Un admin connecté ne doit jamais voir les données de démonstration.
+    demoUsers = [];
+    demoTontines = [];
+    demoSubscribers = [];
+    renderTables();
 
     try {
         // 1. Charger les utilisateurs réels depuis Supabase
@@ -170,11 +321,11 @@ function renderTables() {
         } else {
             latestSubsBody.innerHTML = demoSubscribers.map(sub => `
                 <tr>
-                    <td><strong>${sub.name}</strong></td>
-                    <td>${sub.phone}</td>
-                    <td><span class="badge ${sub.tier}">${sub.tier.toUpperCase()}</span></td>
+                    <td><strong>${esc(sub.name)}</strong></td>
+                    <td>${esc(sub.phone)}</td>
+                    <td><span class="badge ${esc(sub.tier)}">${esc(sub.tier).toUpperCase()}</span></td>
                     <td>${sub.tier === 'mboolo' ? '2 500 FCFA' : (sub.tier === 'solidaire' ? '5 000 FCFA' : '10 000 FCFA')}</td>
-                    <td><span class="badge ${sub.status}">${sub.status === 'actif' ? 'Actif' : 'Expiré'}</span></td>
+                    <td><span class="badge ${esc(sub.status)}">${sub.status === 'actif' ? 'Actif' : 'Expiré'}</span></td>
                 </tr>
             `).join('');
         }
@@ -188,11 +339,11 @@ function renderTables() {
         } else {
             subsTableBody.innerHTML = demoSubscribers.map((sub, idx) => `
                 <tr>
-                    <td><strong>${sub.name}</strong></td>
-                    <td>${sub.phone}</td>
-                    <td><span class="badge ${sub.tier}">${sub.tier.toUpperCase()}</span></td>
-                    <td>${sub.expires}</td>
-                    <td><span class="badge ${sub.status}">${sub.status === 'actif' ? 'Actif' : 'Expiré'}</span></td>
+                    <td><strong>${esc(sub.name)}</strong></td>
+                    <td>${esc(sub.phone)}</td>
+                    <td><span class="badge ${esc(sub.tier)}">${esc(sub.tier).toUpperCase()}</span></td>
+                    <td>${esc(sub.expires)}</td>
+                    <td><span class="badge ${esc(sub.status)}">${sub.status === 'actif' ? 'Actif' : 'Expiré'}</span></td>
                     <td>
                         <button class="btn-primary-sm" onclick="prolongSub(${idx})">
                             ${sub.status === 'actif' ? 'Prolonger' : 'Réactiver'}
@@ -211,12 +362,12 @@ function renderTables() {
         } else {
             tontinesTableBody.innerHTML = demoTontines.map(t => `
                 <tr>
-                    <td><strong>${t.name}</strong></td>
-                    <td>${t.president}</td>
-                    <td>${t.amount}</td>
-                    <td>${t.members} membres</td>
-                    <td><strong>${t.pot}</strong></td>
-                    <td><span class="badge active">${t.status}</span></td>
+                    <td><strong>${esc(t.name)}</strong></td>
+                    <td>${esc(t.president)}</td>
+                    <td>${esc(t.amount)}</td>
+                    <td>${esc(t.members)} membres</td>
+                    <td><strong>${esc(t.pot)}</strong></td>
+                    <td><span class="badge active">${esc(t.status)}</span></td>
                 </tr>
             `).join('');
         }
@@ -230,11 +381,11 @@ function renderTables() {
         } else {
             usersTableBody.innerHTML = demoUsers.map(u => `
                 <tr>
-                    <td><strong>${u.name}</strong></td>
-                    <td>${u.phone}</td>
-                    <td><span class="badge ${u.role}">${u.role.toUpperCase()}</span></td>
-                    <td>${u.joined}</td>
-                    <td><span class="badge active">${u.status}</span></td>
+                    <td><strong>${esc(u.name)}</strong></td>
+                    <td>${esc(u.phone)}</td>
+                    <td><span class="badge ${esc(u.role)}">${esc(u.role).toUpperCase()}</span></td>
+                    <td>${esc(u.joined)}</td>
+                    <td><span class="badge active">${esc(u.status)}</span></td>
                 </tr>
             `).join('');
         }
@@ -242,12 +393,66 @@ function renderTables() {
 }
 
 
+const PRIX_FORFAITS = { mboolo: 2500, solidaire: 5000, tycoon: 10000 };
+
+// Active (ou prolonge) un forfait de 30 jours pour un président, après un
+// paiement reçu hors application (espèces). Écrit l'historique dans
+// abonnements_saas et met à jour le profil ; autorisé par la RLS pour un admin.
+const MOYENS_PAIEMENT = ['airtel_money', 'moov_money', 'especes', 'manuel_admin'];
+
+async function activerAbonnement(phone, tier, moyen = 'manuel_admin') {
+    if (!MOYENS_PAIEMENT.includes(moyen)) throw new Error("Moyen de paiement inconnu");
+    if (!supabaseClient) throw new Error("Service indisponible");
+    if (!/^\+241\d{9}$/.test(phone)) throw new Error("Numéro invalide (format attendu : +241 suivi de 9 chiffres)");
+    if (!PRIX_FORFAITS[tier]) throw new Error("Forfait inconnu");
+
+    const { data: profil, error: pErr } = await supabaseClient
+        .from('utilisateurs')
+        .select('abonnement_expire_le')
+        .eq('telephone', phone)
+        .maybeSingle();
+    if (pErr) throw pErr;
+    if (!profil) throw new Error("Aucun utilisateur avec ce numéro : il doit d'abord se connecter à l'application");
+
+    // Prolongation à partir de l'échéance actuelle si elle est future.
+    const base = profil.abonnement_expire_le && new Date(profil.abonnement_expire_le) > new Date()
+        ? new Date(profil.abonnement_expire_le)
+        : new Date();
+    const expire = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { error: aErr } = await supabaseClient.from('abonnements_saas').insert({
+        telephone_president: phone,
+        forfait: tier,
+        montant: PRIX_FORFAITS[tier],
+        moyen_paiement: moyen,
+        statut: 'actif',
+        expire_le: expire
+    });
+    if (aErr) throw aErr;
+
+    const { error: uErr } = await supabaseClient.from('utilisateurs').update({
+        role: 'president',
+        abonnement_forfait: tier,
+        abonnement_statut: 'actif',
+        abonnement_expire_le: expire,
+        modifie_a: new Date().toISOString()
+    }).eq('telephone', phone);
+    if (uErr) throw uErr;
+
+    return expire;
+}
+
 // PROLONGER / ACTIVER UN ABONNEMENT
-window.prolongSub = function(idx) {
-    demoSubscribers[idx].status = 'actif';
-    demoSubscribers[idx].expires = '09 Mars 2026';
-    renderTables();
-    alert(`Abonnement de ${demoSubscribers[idx].name} réactivé avec succès pour 30 jours !`);
+window.prolongSub = async function(idx) {
+    const sub = demoSubscribers[idx];
+    if (!sub) return;
+    try {
+        const expire = await activerAbonnement(sub.phone, sub.tier);
+        alert(`Abonnement de ${sub.phone} prolongé jusqu'au ${new Date(expire).toLocaleDateString('fr-FR')}.`);
+        fetchLiveSupabaseData();
+    } catch (err) {
+        alert("Échec de la prolongation : " + (err.message || err));
+    }
 };
 
 // 4. NAVIGATION PAR ONGLET ET SIDEBAR RESPONSIVE
@@ -342,35 +547,19 @@ function setupModal() {
     if (form) {
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
-            const phone = document.getElementById("sub-phone").value;
+            const phone = document.getElementById("sub-phone").value.replace(/\s/g, '');
             const tier = document.getElementById("sub-tier").value;
 
-            demoSubscribers.unshift({
-                name: "Président " + phone.slice(-4),
-                phone: phone,
-                tier: tier,
-                expires: "09 Mars 2026",
-                status: "actif"
-            });
-
-            if (supabaseClient) {
-                try {
-                    await supabaseClient.from('abonnements_saas').insert({
-                        telephone_president: phone,
-                        forfait: tier,
-                        montant: tier === 'mboolo' ? 2500 : (tier === 'solidaire' ? 5000 : 10000),
-                        moyen_paiement: 'especes',
-                        expire_le: new Date(Date.now() + 30*24*60*60*1000).toISOString()
-                    });
-                } catch (err) {
-                    console.log("Supabase sub insert:", err);
-                }
+            try {
+                const moyen = document.getElementById("sub-method").value;
+                const expire = await activerAbonnement(phone, tier, moyen);
+                modal.classList.add("hidden");
+                alert(`Abonnement ${tier.toUpperCase()} activé pour ${phone} jusqu'au ${new Date(expire).toLocaleDateString('fr-FR')}.`);
+                form.reset();
+                fetchLiveSupabaseData();
+            } catch (err) {
+                alert("Échec de l'activation : " + (err.message || err));
             }
-
-            renderTables();
-            modal.classList.add("hidden");
-            alert(`Abonnement ${tier.toUpperCase()} activé pour ${phone} !`);
-            form.reset();
         });
     }
 
@@ -391,57 +580,30 @@ function setupModal() {
             const name = document.getElementById("admin-new-name").value;
             const email = document.getElementById("admin-new-email").value;
             const phone = document.getElementById("admin-new-phone").value;
-            const pwd = document.getElementById("admin-new-pwd").value;
 
-            // Ajouter dans la liste démo des utilisateurs
-            demoUsers.unshift({
-                name: name,
-                phone: phone,
-                role: "admin",
-                joined: new Date().toLocaleDateString('fr-FR'),
-                status: "Actif"
-            });
-
-            // Insérer dans Supabase si connecté
-            if (supabaseClient) {
-                try {
-                    // 1. Inscrire dans Supabase Auth
-                    await supabaseClient.auth.signUp({
-                        email: email,
-                        password: pwd,
-                        options: { data: { name: name, role: 'admin' } }
-                    });
-
-                    // 2. Insérer dans la table utilisateurs
-                    await supabaseClient.from('utilisateurs').insert({
-                        telephone: phone,
-                        nom: name,
-                        email: email,
-                        role: 'admin'
-                    });
-                } catch (err) {
-                    console.log("Supabase create admin error:", err);
-                }
+            if (!supabaseClient) {
+                alert("Service indisponible.");
+                return;
             }
 
-            renderTables();
+            // Création côté serveur (Edge Function creer-admin) : vérifie que
+            // l'appelant est admin et ne déconnecte pas la session en cours.
+            const { data, error } = await supabaseClient.functions.invoke('creer-admin', {
+                body: { nom: name, email: email, telephone: phone }
+            });
+            let message = data && data.error;
+            if (error && error.context && typeof error.context.json === 'function') {
+                try { message = (await error.context.json()).error; } catch (_) { /* ignoré */ }
+            }
+            if (error || !data || !data.success) {
+                alert("Échec de la création : " + (message || "erreur inconnue"));
+                return;
+            }
+
             adminModal.classList.add("hidden");
             alert(`Administrateur ${name} (${email}) créé avec succès !`);
             adminForm.reset();
-        });
-    }
-}
-
-
-function setupPasswordToggle() {
-    const toggleBtn = document.getElementById("toggle-pwd");
-    const pwdInput = document.getElementById("admin-password");
-
-    if (toggleBtn && pwdInput) {
-        toggleBtn.addEventListener("click", () => {
-            const isPassword = pwdInput.type === "password";
-            pwdInput.type = isPassword ? "text" : "password";
-            toggleBtn.className = isPassword ? "fa-regular fa-eye-slash toggle-password" : "fa-regular fa-eye toggle-password";
+            fetchLiveSupabaseData();
         });
     }
 }

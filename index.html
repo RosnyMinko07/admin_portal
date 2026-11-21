@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Supabase JS Client CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2026-11-20">
 </head>
 <body>
 
@@ -30,27 +30,45 @@
 
 
             
-            <form id="login-form" autocomplete="off">
-                <div class="form-group">
-                    <label for="admin-email"><i class="fa-regular fa-envelope"></i> Adresse Email</label>
-                    <input type="email" id="admin-email" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="admin-password"><i class="fa-solid fa-lock"></i> Mot de passe</label>
-                    <div class="password-input">
-                        <input type="password" id="admin-password" required>
-                        <i class="fa-regular fa-eye toggle-password" id="toggle-pwd"></i>
-                    </div>
-                </div>
+            <!-- Connexion des administrateurs : compte Google uniquement. -->
+            <div id="login-form">
+                <p style="text-align:center;color:#64748B;margin-bottom:16px;">
+                    Réservé aux administrateurs TONTI, avec leur compte Google.
+                </p>
 
                 <div class="error-banner" id="login-error"></div>
 
-                <button type="submit" class="btn-primary" id="btn-login">
-                    <span>Se connecter au Dashboard</span>
-                    <i class="fa-solid fa-arrow-right"></i>
+                <button type="button" class="btn-primary" id="btn-login">
+                    <i class="fa-brands fa-google"></i>
+                    <span>Se connecter avec Google</span>
                 </button>
-            </form>
+            </div>
+
+            <!-- 2e étape : code à 6 chiffres d'une application d'authentification -->
+            <div id="mfa-step" class="hidden">
+                <p id="mfa-intro" style="text-align:center;color:#64748B;margin-bottom:12px;"></p>
+
+                <div id="mfa-enrolement" class="hidden" style="text-align:center;">
+                    <img id="mfa-qr" alt="QR code à scanner" style="width:200px;height:200px;background:#fff;padding:8px;border-radius:8px;">
+                    <p style="font-size:12px;color:#64748B;margin:8px 0 4px;">Impossible de scanner ? Saisissez cette clé dans l'application :</p>
+                    <code id="mfa-cle" style="display:block;word-break:break-all;font-size:12px;margin-bottom:12px;"></code>
+                </div>
+
+                <div class="form-group">
+                    <label for="mfa-code"><i class="fa-solid fa-shield-halved"></i> Code à 6 chiffres</label>
+                    <input type="text" id="mfa-code" inputmode="numeric" autocomplete="one-time-code"
+                           maxlength="6" pattern="[0-9]{6}" placeholder="123456">
+                </div>
+
+                <div class="error-banner" id="mfa-error"></div>
+
+                <button type="button" class="btn-primary" id="btn-mfa">
+                    <i class="fa-solid fa-check"></i> <span>Valider le code</span>
+                </button>
+                <button type="button" class="btn-secondary" id="btn-mfa-annuler" style="width:100%;margin-top:8px;">
+                    Annuler et se déconnecter
+                </button>
+            </div>
         </div>
     </div>
 
@@ -298,7 +316,7 @@
             <form id="activate-sub-form">
                 <div class="form-group">
                     <label for="sub-phone">Numéro de téléphone du Président</label>
-                    <input type="text" id="sub-phone" placeholder="+241077123456" required>
+                    <input type="tel" id="sub-phone" placeholder="+241661234567" pattern="[+]241[0-9]{9}" required>
                 </div>
 
                 <div class="form-group">
@@ -342,19 +360,18 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="admin-new-email">Adresse Email Admin</label>
-                    <input type="email" id="admin-new-email" placeholder="admin2@tonti.ga" required>
+                    <label for="admin-new-email">Adresse de son compte Google</label>
+                    <input type="email" id="admin-new-email" placeholder="prenom.nom@gmail.com" required>
                 </div>
 
                 <div class="form-group">
                     <label for="admin-new-phone">Numéro de téléphone</label>
-                    <input type="text" id="admin-new-phone" placeholder="+24107000000" required>
+                    <input type="tel" id="admin-new-phone" placeholder="+241661234567" pattern="[+]241[0-9]{9}" required>
                 </div>
 
-                <div class="form-group">
-                    <label for="admin-new-pwd">Mot de passe temporaire</label>
-                    <input type="password" id="admin-new-pwd" placeholder="••••••••" required>
-                </div>
+                <p style="color:#64748B;font-size:13px;">
+                    Pas de mot de passe : la personne se connectera avec ce compte Google.
+                </p>
 
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" id="cancel-admin-modal-btn">Annuler</button>
@@ -383,7 +400,8 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- Changer v= à chaque mise à jour pour forcer le rechargement. -->
+    <script src="app.js?v=2026-11-21"></script>
 </body>
 </html>
 
