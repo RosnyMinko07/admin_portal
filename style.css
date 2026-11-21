@@ -3,23 +3,23 @@
    ============================================================ */
 
 :root {
-    --primary: #9A6F1E;                  /* Or foncé (palette TONTI blanc et or) */
-    --primary-light: #C9962E;
-    --primary-glass: rgba(201, 150, 46, 0.12);
-    --primary-border: rgba(201, 150, 46, 0.30);
+    --primary: #13235B;                  /* Bleu marine (palette TONTI) */
+    --primary-light: #2F5BD3;
+    --primary-glass: rgba(47, 91, 211, 0.08);
+    --primary-border: rgba(47, 91, 211, 0.25);
     
-    --accent: #C9962E;                  /* Or */
-    --accent-blue: #2563EB;             /* Bleu royal doux */
+    --accent: #2F5BD3;                  /* Bleu vif */
+    --accent-blue: #2F5BD3;             /* Bleu royal doux */
     
-    --bg-dark: #1F1B14;
+    --bg-dark: #0B1538;
     --bg-card: rgba(255, 255, 255, 0.90);
-    --bg-body: #FAF8F3;                 /* Blanc cassé chaud */
+    --bg-body: #F4F6FB;                 /* Gris-bleu très clair */
     
-    --text-primary: #1F1B14;            /* Encre */
-    --text-secondary: #6B6457;
-    --text-muted: #A39C8E;
+    --text-primary: #0F172A;
+    --text-secondary: #5B6478;
+    --text-muted: #94A0B8;
     
-    --border-color: #ECE4D3;
+    --border-color: #E3E8F2;
     --sidebar-width: 260px;
     --radius: 16px;
     --shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
@@ -53,7 +53,7 @@ h1, h2, h3, h4, .brand h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #FFFFFF 0%, #FAF3E3 55%, #F1DFB4 100%);
+    background: #F4F6FB;
     padding: 20px;
 }
 
@@ -65,7 +65,7 @@ h1, h2, h3, h4, .brand h1 {
     padding: 40px;
     width: 100%;
     max-width: 440px;
-    box-shadow: 0 25px 50px -12px rgba(31, 27, 20, 0.18);
+    box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.14);
     animation: fadeIn 0.5s ease-out;
 }
 
@@ -163,7 +163,7 @@ h1, h2, h3, h4, .brand h1 {
 .btn-primary {
     width: 100%;
     padding: 14px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    background: var(--primary);
     color: white;
     border: none;
     border-radius: 10px;
@@ -402,8 +402,8 @@ h1, h2, h3, h4, .brand h1 {
 }
 
 .status-dot.green {
-    background: #C9962E;
-    box-shadow: 0 0 0 3px rgba(201, 150, 46, 0.25);
+    background: #2F5BD3;
+    box-shadow: 0 0 0 3px rgba(47, 91, 211, 0.2);
 }
 
 .content-body {
@@ -474,10 +474,10 @@ h1, h2, h3, h4, .brand h1 {
     font-size: 22px;
 }
 
-.metric-card.gold .icon { background: #FEF3C7; color: #D97706; }
-.metric-card.green .icon { background: #FAF3E3; color: #9A6F1E; }
+.metric-card.gold .icon { background: #EEF1F8; color: #13235B; }
+.metric-card.green .icon { background: #EAF0FC; color: #2F5BD3; }
 .metric-card.blue .icon { background: #DBEAFE; color: #2563EB; }
-.metric-card.purple .icon { background: #F3E8FF; color: #9333EA; }
+.metric-card.purple .icon { background: #EEF1F8; color: #13235B; }
 
 .metric-details .label {
     font-size: 13px;
@@ -497,7 +497,7 @@ h1, h2, h3, h4, .brand h1 {
     font-weight: 600;
 }
 
-.metric-details .trend.positive { color: #9A6F1E; }
+.metric-details .trend.positive { color: #2F5BD3; }
 .metric-details .subtext { font-size: 12px; color: var(--text-muted); }
 
 /* ============================================================
@@ -571,7 +571,7 @@ tr:last-child td {
     display: inline-block;
 }
 
-.badge.active, .badge.actif { background: #FAF3E3; color: #9A6F1E; }
+.badge.active, .badge.actif { background: #EAF0FC; color: #2F5BD3; }
 .badge.expired, .badge.expire { background: #FEE2E2; color: #B91C1C; }
 .badge.mboolo { background: #FEF3C7; color: #B45309; }
 .badge.solidaire { background: #E0E7FF; color: #4338CA; }
